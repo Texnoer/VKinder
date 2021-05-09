@@ -4,10 +4,9 @@ import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
 from tokens import bot_token
 from tokens import user_token
-import json
 from pprint import pprint
 
-from data_base import check_id_user
+# from data_base import check_id_user
 token_u = user_token
 token_b = bot_token
 
@@ -50,6 +49,7 @@ class Search_people:
 
 
     def search_user(self):
+        """Отбор притендентов"""
         users_url = self.url + 'users.search'
         users_params = {
             'access_token': self.token,
@@ -58,32 +58,33 @@ class Search_people:
             'age_to': self.age,
             'status': self.status,
             'sex': self.gender,
-            'count': 1000,
+            'count': 20,
             'hometown': self.city,
             'has_photo': 1,
             'fields': 'screen_name'
         }
         response = requests.get(users_url, params=users_params)
         result = response.json()
-        if response in result:
+        # pprint(result)
+        if 'response' in result:
             self.list_users = result['response']['items']
             return self.list_users
-        # f = Search_people().search_user()
-        # pprint(f)
 
-
-    def get_photos(self, user_id):
+        """ Дописать в get_photos параметр"""
+    def get_photos(self):
+        """Отбор фото"""
         foto_url = self.url + 'photos.get'
         foto_params = {
             'access_token': self.token,
             'v': '5.126',
-            'owner_id': user_id,
+            'owner_id': 12641364,
             'album_id': 'profile',
             'extended': True,
             'photo_sizes': True
         }
         photos = requests.get(foto_url, params=foto_params)
-        return photos.json().get('response', {}).get('items', [])
+        compilation = photos.json().get('response', {}).get('items', [])
+        return compilation
 
 
     def get_largest(self, size_dict):
@@ -93,17 +94,15 @@ class Search_people:
         else:
             return size_dict['height']
 
-    def sizes_max(self, photos):
+    def sizes_max(self):
         """Цикл поиска фото наибольшей популярности"""
         self.list_photo = []
-        for photo in photos:
+        for photo in self.get_photos():
             sizes = photo['sizes']
             max_size = max(sizes, key=self.get_largest)['url']
-            type_photo = max(sizes, key=self.get_largest)['type']
-            self.list_photo.append({'url': max_size, 'likes': photo['likes']['count'] + photo['comments']['count'], 'type': type_photo})
-        self.sort_photo = sorted(self.list_photo, key=lambda x: x['popular'], reverse=True)[:3]
-        print(self.sort_photo)
-        return self.sort_photo
+            self.list_photo.append({'url': max_size, 'likes': photo['likes']['count'], 'comments': photo['comments']['count']})
+        self.sorted_photo = sorted(self.list_photo, key=lambda value: value['likes'] + value['comments'])[-3:]
+        return self.sorted_photo
 
 
     def user_profile(self, list_users):
@@ -136,5 +135,11 @@ class Search_people:
         elif len(self.list_users) == 0 and len(self.list_skipped) == 0:
             return None
 
+# f = Search_people().get_photos()
+# pprint(f)
+
+# b = Search_people().get_photos('1621461')
+z = Search_people().sizes_max()
+pprint(z)
 # if __name__ == '__main__':
 #     Bot_Vkontakte().communication()
